@@ -1,0 +1,59 @@
+sample-rate : 16_000
+hop : 160
+token-hop : 640
+token-rate : 25
+vocab-size : 6561
+
+t3 : 
+
+  text : 
+
+    start-token : 255
+    stop-token : 0 
+    tokens-dict-size : 704
+    max-tokens : 2048
+
+  speech : 
+    start-token : 6561
+    stop-token : 6562
+    tokens-dict-size : 8194
+    max-speech : 4096
+
+  llama-config-name : Llama_520M
+  input-pos-emb : learned
+  speech-cond-prompt-len : 150
+
+  encoder-type : voice_encoder
+  speaker-embed-size : 256
+  use-preceiver-resampler : True
+  emotion-adv : True
+
+llama : 
+  llama_520m : 
+    vocab-size : 8
+    max-position-embeddings : 131_072
+    hidden-size : 1024
+    intermediate-size : 4096
+    num-hidden-layers : 30
+    num-attention-heads : 30
+    attn-implementation : eager
+    head-dim : 64
+    tiq-word-embeddings : False
+    hidden-act : silu
+    attention-bias : False
+    attention-dropout : 0.0
+    initializer-range : 0.02
+    mlp-bias : False
+    model-type : llama
+    num-key-value-heads : 16
+    pretraining-tp : 1
+    rms-norm-eps : 1e-05
+    rope-scaling : 
+      factor : 8.0
+      high-freq-factor : 4.0
+      low-freq-factor : 1.0
+      original-max-posistion-embeddings : 8192
+      rope-type : llama3
+    rope-theta : 500000.0
+    torch-dtype : bfloat16
+    use-chache : True

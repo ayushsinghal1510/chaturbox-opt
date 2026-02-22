@@ -12,13 +12,15 @@ from torch import nn, Tensor
 from transformers import LlamaModel, LlamaConfig
 from transformers.generation.logits_process import TopPLogitsWarper, RepetitionPenaltyLogitsProcessor, MinPLogitsWarper
 
-from .modules.learned_pos_emb import LearnedPositionEmbeddings
-
-from .modules.cond_enc import T3CondEnc, T3Cond
 from .modules.t3_config import T3Config
-from .llama_configs import LLAMA_CONFIGS
-from .inference.t3_hf_backend import T3HuggingfaceBackend
-from .inference.alignment_stream_analyzer import AlignmentStreamAnalyzer
+
+from ....models import (
+    AlignmentStreamAnalyzer , 
+    T3HuggingfaceBackend , 
+    LearnedPositionEmbeddings , 
+    T3CondEnc , 
+    T3Cond
+)
 from ..utils import AttrDict
 
 
@@ -46,13 +48,45 @@ class T3(nn.Module):
             hp = T3Config.english_only()  # Default to English-only config for backward compatibility
         super().__init__()
         self.hp = hp
-        self.cfg = LlamaConfig(**LLAMA_CONFIGS[hp.llama_config_name])
+        self.cfg = LlamaConfig(**dict(
+            # Arbitrary small number that won't cause problems when loading.
+            # These param are unused due to custom input layers.
+            vocab_size=8,
+            # default params needed for loading most pretrained 1B weights
+            max_position_embeddings=131072,
+            hidden_size=1024,
+            intermediate_size=4096,
+            num_hidden_layers=30,
+            num_attention_heads=16,
+            attn_implementation="eager",
+            head_dim=64,
+            tie_word_embeddings=False,
+            hidden_act="silu",
+            attention_bias=False,
+            attention_dropout=0.0,
+            initializer_range=0.02,
+            mlp_bias=False,
+            model_type="llama",
+            num_key_value_heads=16,
+            pretraining_tp=1,
+            rms_norm_eps=1e-05,
+            rope_scaling=dict(
+                factor=8.0,
+                high_freq_factor=4.0,
+                low_freq_factor=1.0,
+                original_max_position_embeddings=8192,
+                rope_type="llama3"
+            ),
+            rope_theta=500000.0,
+            torch_dtype="bfloat16",
+            use_cache=True,
+        ))
         self.tfmr = LlamaModel(self.cfg)
         self.dim = self.cfg.hidden_size
         self.deepspeed_patch_applied = False
 
         # conditioning / embedding
-        self.cond_enc = T3CondEnc(hp)
+        self.cond_enc = T3CondEnc()
         self.text_emb = nn.Embedding(hp.text_tokens_dict_size, self.dim)
         self.speech_emb = nn.Embedding(hp.speech_tokens_dict_size, self.dim)
 

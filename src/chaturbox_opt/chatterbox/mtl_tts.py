@@ -9,13 +9,15 @@ import torch.nn.functional as F
 from safetensors.torch import load_file as load_safetensors
 from huggingface_hub import snapshot_download
 
-from .models.t3 import T3
+# from .models.t3 import T3
 from .models.t3.modules.t3_config import T3Config
 from .models.s3tokenizer import S3_SR, drop_invalid_tokens
 from .models.s3gen import S3GEN_SR, S3Gen
 from .models.tokenizers import MTLTokenizer
 from .models.voice_encoder import VoiceEncoder
 from .models.t3.modules.cond_enc import T3Cond
+
+from ..models import T3
 
 
 REPO_ID = "ResembleAI/chatterbox"
@@ -158,14 +160,38 @@ class ChatterboxMultilingualTTS:
         return SUPPORTED_LANGUAGES.copy()
 
     @classmethod
+    def load_voice_encoder(cls) -> VoiceEncoder : 
+
+        ve : VoiceEncoder = VoiceEncoder()
+        
+        ve.load_state_dict(
+            torch.load(
+                'assets/models/voice_encoder/voice_encoder.pt' , 
+                weights_only = True , 
+                map_location = torch.device('cpu')
+            )
+        )
+
+        # ve.to(device).eval()
+        ve.eval()
+
+        return ve
+
+    @classmethod
+    def load_t3_model(cls) -> T3 : 
+
+        t3 : T3 = T3(T3Config.multilingual())
+        
+        t3_state = load_safetensors(
+            
+        )
+
+    @classmethod
     def from_local(cls, ckpt_dir, device) -> 'ChatterboxMultilingualTTS':
+
         ckpt_dir = Path(ckpt_dir)
 
-        ve = VoiceEncoder()
-        ve.load_state_dict(
-            torch.load(ckpt_dir / "ve.pt", weights_only=True , map_location=torch.device('cpu'))
-        )
-        ve.to(device).eval()
+        ve : VoiceEncoder = cls.load_voice_encoder()
 
         t3 = T3(T3Config.multilingual())
         t3_state = load_safetensors(ckpt_dir / "t3_mtl23ls_v2.safetensors")
