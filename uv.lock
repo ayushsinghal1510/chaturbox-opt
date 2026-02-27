@@ -6,9 +6,9 @@ requires-python = ">=3.13"
 members = [
     "chaturbox-opt",
     "modules",
-    "s3",
     "s3gen",
     "s3tokenizers",
+    "t3tokenizers",
 ]
 
 [[package]]
@@ -961,27 +961,6 @@ wheels = [
 ]
 
 [[package]]
-name = "peft"
-version = "0.18.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "accelerate" },
-    { name = "huggingface-hub" },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "psutil" },
-    { name = "pyyaml" },
-    { name = "safetensors" },
-    { name = "torch" },
-    { name = "tqdm" },
-    { name = "transformers" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d8/48/147b3ea999560b40a34fd78724c7777aa9d18409c2250bdcaf9c4f2db7fc/peft-0.18.1.tar.gz", hash = "sha256:2dd0d6bfce936d1850e48aaddbd250941c5c02fc8ef3237cd8fd5aac35e0bae2", size = 635030, upload-time = "2026-01-09T13:08:01.136Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b3/14/b4e3f574acf349ae6f61f9c000a77f97a3b315b4bb6ad03791e79ae4a568/peft-0.18.1-py3-none-any.whl", hash = "sha256:0bf06847a3551e3019fc58c440cffc9a6b73e6e2962c95b52e224f77bbdb50f1", size = 556960, upload-time = "2026-01-09T13:07:55.865Z" },
-]
-
-[[package]]
 name = "pillow"
 version = "12.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1289,37 +1268,6 @@ wheels = [
 ]
 
 [[package]]
-name = "s3"
-version = "0.1.0"
-source = { editable = "s3" }
-dependencies = [
-    { name = "accelerate" },
-    { name = "conformer" },
-    { name = "diffusers" },
-    { name = "librosa" },
-    { name = "peft" },
-    { name = "pyyaml" },
-    { name = "s3tokenizer" },
-    { name = "torch" },
-    { name = "torchaudio" },
-    { name = "torchcodec" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "accelerate", specifier = ">=1.12.0" },
-    { name = "conformer", specifier = ">=0.3.2" },
-    { name = "diffusers", specifier = ">=0.36.0" },
-    { name = "librosa", specifier = ">=0.11.0" },
-    { name = "peft", specifier = ">=0.18.1" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "s3tokenizer", specifier = ">=0.3.0" },
-    { name = "torch", specifier = ">=2.10.0" },
-    { name = "torchaudio", specifier = ">=2.10.0" },
-    { name = "torchcodec", specifier = ">=0.10.0" },
-]
-
-[[package]]
 name = "s3gen"
 version = "0.1.0"
 source = { editable = "s3gen" }
@@ -1592,6 +1540,31 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/83/d3/803453b36afefb7c2bb238361cd4ae6125a569b4db67cd9e79846ba2d68c/sympy-1.14.0.tar.gz", hash = "sha256:d3d3fe8df1e5a0b42f0e7bdf50541697dbe7d23746e894990c030e2b05e72517", size = 7793921, upload-time = "2025-04-27T18:05:01.611Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl", hash = "sha256:e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5", size = 6299353, upload-time = "2025-04-27T18:04:59.103Z" },
+]
+
+[[package]]
+name = "t3tokenizers"
+version = "0.1.0"
+source = { editable = "t3tokenizers" }
+dependencies = [
+    { name = "modules" },
+    { name = "pyyaml" },
+    { name = "s3gen" },
+    { name = "s3tokenizer" },
+    { name = "tokenizers" },
+    { name = "torch" },
+    { name = "transformers" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "modules", editable = "modules" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "s3gen", editable = "s3gen" },
+    { name = "s3tokenizer", specifier = ">=0.3.0" },
+    { name = "tokenizers", specifier = ">=0.22.2" },
+    { name = "torch", specifier = ">=2.10.0" },
+    { name = "transformers", specifier = ">=5.2.0" },
 ]
 
 [[package]]

@@ -20,6 +20,7 @@ members = [
     "s3tokenizers",
     "s3gen",
     "modules",
+    "t3tokenizers"
 ]
 
 [tool.uv.sources]
