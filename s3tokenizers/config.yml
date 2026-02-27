@@ -1,0 +1,22 @@
+tokenizer : &tokenizer
+  
+  model-name : speech_tokenizer_v2_25hz
+  sample-rate : 16000
+  n_fft : 400
+  padding : 0 
+  hop_length : 160
+
+tests : 
+  s3tokenizer : 
+    input-file-path : /teamspace/studios/this_studio/output.wav
+    sample-rate : 16000
+
+    tokenizer : 
+      <<: *tokenizer
+
+  s3tokenizer-streaming : 
+    input-file-path : /teamspace/studios/this_studio/output.wav
+    chunk-size : 6400
+
+    tokenizer : 
+      <<: *tokenizer

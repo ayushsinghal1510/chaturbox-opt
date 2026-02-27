@@ -8,11 +8,11 @@ import yaml
 from numpy import ndarray
 from torch import Tensor
 
-from ..tokenizer import S3Tokenizer
-from ..generation.generation_ import S3Token2Wav
+from s3tokenizers import S3Tokenizer
+from .generation.generation_ import S3Token2Wav
 
-from ..generation.xvector import CAMPPlus
-from ..modules import MEL_SPEC
+from .generation.xvector import CAMPPlus
+from modules import MEL_SPEC
 
 def stream_bytes_to_s3_tokens(
     iterator : Iterable[bytes] , 

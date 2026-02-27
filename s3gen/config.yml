@@ -1,0 +1,37 @@
+tokenizer : &tokenizer
+  
+  model-name : speech_tokenizer_v2_25hz
+  sample-rate : 16000
+  n_fft : 400
+  padding : 0 
+  hop_length : 160
+
+mel-spec : &mel-spec
+  n-fft : 1920 
+  num-mels : 80
+  sample-rate : 24000
+  hop-size : 480
+  win-size : 1920
+  f-min : 0
+  f-max : 8000
+  center : False
+  normalized : False
+  onesided : True
+
+  c : 1
+  clip-val : 0.000001
+
+tests : 
+
+  s3gen-streaming : 
+    input-file-path : /teamspace/studios/this_studio/output.wav
+    chunk-size : 6400
+    reference-audio-path : /teamspace/studios/this_studio/output.wav
+
+    tokenizer : 
+      <<: *tokenizer
+
+    mel-spec : 
+      <<: *mel-spec
+
+    generation : 

@@ -1,27 +1,25 @@
 [project]
-name = "chaturbox-opt"
+name = "s3gen"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "conformer>=0.3.2",
+    "diffusers>=0.36.0",
+    "modules",
+    "s3tokenizers",
+    "torchcodec>=0.10.0",
 ]
 
 [project.scripts]
-chaturbox-opt = "chaturbox_opt:main"
+s3gen = "s3gen:main"
+s3gen_streaming_test = "s3gen.app:main"
 
 [build-system]
 requires = ["uv_build>=0.8.17,<0.9.0"]
 build-backend = "uv_build"
 
-[tool.uv.workspace]
-members = [
-    "s3",
-    "s3tokenizers",
-    "s3gen",
-    "modules",
-]
-
 [tool.uv.sources]
-s3 = { workspace = true }
 s3tokenizers = { workspace = true }
+modules = { workspace = true }
