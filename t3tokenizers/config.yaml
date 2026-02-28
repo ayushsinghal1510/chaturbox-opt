@@ -54,7 +54,8 @@ voice-encoder : &voice-encoder
   model-path : assets/models/voice_encoder/ve.pt
 
 t3 : &t3
-  model-path : assets/models/t3/t3_mtl23ls_v2.safetensors
+  model-path : /teamspace/studios/this_studio/models/t3_mtl23ls_v2.safetensors
+  # model-path : /teamspace/studios/this_studio/models/t3_23lang.safetensors
 
 tests : 
 

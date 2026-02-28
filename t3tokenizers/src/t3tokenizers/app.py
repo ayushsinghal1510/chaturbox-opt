@@ -9,7 +9,7 @@ from torch import Tensor
 
 from .tokenizer_ import MTLTokenizer
 
-from .models import VoiceEncoder , T3
+from .models import VoiceEncoder
 
 from s3gen import S3Token2Wav
 from s3tokenizers import S3Tokenizer
@@ -18,6 +18,9 @@ from s3gen import CAMPPlus
 from modules import MEL_SPEC
 
 from .models_.t3.modules.cond_enc import T3Cond
+from .models_.t3.t3 import T3
+
+import torch.nn.functional as F
 
 from safetensors.torch import load_file as load_safetensors
 
@@ -147,6 +150,14 @@ def main() :
 
     config = config['tests']['t3-generation']
 
+    t3 = T3(T3Config.multilingual())
+    t3_state = load_safetensors(config['t3']['model-path'])
+    if "model" in t3_state.keys():
+        t3_state = t3_state["model"][0]
+    t3.load_state_dict(t3_state)
+    t3.to(device).eval()
+
+
     tokenizer : MTLTokenizer = MTLTokenizer(config['tokenizer'])
 
     ve : VoiceEncoder = VoiceEncoder()
@@ -197,7 +208,7 @@ def main() :
         'embedding'        : ref_x_vector.to(device)
     }
 
-    tokens : Tensor = tokenizer.text_to_tokens(
+    text_tokens : Tensor = tokenizer.text_to_tokens(
         text = 'Hello, how are you doing today?' , 
         language_id = 'en'
     )
@@ -221,12 +232,47 @@ def main() :
     ).to(device = device)
 
     conds = Conditionals(t3_cond , ref_dict)
+    text_tokens = torch.cat([text_tokens, text_tokens], dim=0)  # Need two seqs for CFG
 
-    t3 = T3(T3Config.multilingual())
-    t3_state = load_safetensors(config['t3']['model-path'])
-    if "model" in t3_state.keys():
-        t3_state = t3_state["model"][0]
-    t3.load_state_dict(t3_state)
-    t3.to(device).eval()
+    sot = 255
+    eot = 0
+    text_tokens = F.pad(text_tokens, (1, 0), value=sot)
+    text_tokens = F.pad(text_tokens, (0, 1), value=eot)
 
-    print(tokens)
+    model : S3Token2Wav = S3Token2Wav(device , config['generation']).to(device)
+    model.eval()
+
+    with torch.inference_mode():
+        speech_tokens = t3.inference(
+            t3_cond=conds.t3,
+            text_tokens=text_tokens,
+            max_new_tokens=1000,  # TODO: use the value in config
+            temperature=0.8,
+            cfg_weight=0.5,
+            repetition_penalty=2.0,
+            min_p=0.05,
+            top_p=1.0,
+        )
+        # Extract only the conditional batch.
+        speech_tokens = speech_tokens[0]
+
+        # # TODO: output becomes 1D
+        # speech_tokens = drop_invalid_tokens(speech_tokens)
+        speech_tokens = speech_tokens.to(device)
+
+        # print(speech_tokens.shape)
+
+        output_wavs , output_sources = model.inference(
+            speech_tokens = speech_tokens.unsqueeze(0) , 
+            ref_dict = ref_dict , 
+            # cache_source = output_sources , 
+            # finalize = is_last
+        )
+
+        output_wavs = output_wavs.squeeze(0).detach().cpu()
+
+        print(output_wavs)
+
+        torchaudio.save('file.wav' , output_wavs , sample_rate = 16000)
+
+    print(text_tokens)
