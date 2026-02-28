@@ -53,6 +53,9 @@ tokenizer : &tokenizer
 voice-encoder : &voice-encoder
   model-path : assets/models/voice_encoder/ve.pt
 
+t3 : &t3
+  model-path : assets/models/t3/t3_mtl23ls_v2.safetensors
+
 tests : 
 
   t3-generation : 
@@ -77,3 +80,5 @@ tests :
     attributes : 
       exaggeration : 1.0
 
+    t3 : 
+      <<: *t3
