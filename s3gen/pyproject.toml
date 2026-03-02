@@ -8,13 +8,17 @@ dependencies = [
     "conformer>=0.3.2",
     "diffusers>=0.36.0",
     "modules",
+    "peft>=0.18.1",
     "s3tokenizers",
+    "seaborn>=0.13.2",
     "torchcodec>=0.10.0",
+    "torchtyping>=0.1.5",
 ]
 
 [project.scripts]
 s3gen = "s3gen:main"
 s3gen_streaming_test = "s3gen.app:main"
+s3gen_direct_test = "s3gen.tests.direct_:main"
 
 [build-system]
 requires = ["uv_build>=0.8.17,<0.9.0"]

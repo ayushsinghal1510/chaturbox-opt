@@ -466,9 +466,11 @@ class HiFTGenerator(nn.Module):
         # f0->source
         s = self.f0_upsamp(f0[:, None]).transpose(1, 2)  # bs,n,t
         s, _, _ = self.m_source(s)
+        print(s.shape)
         s = s.transpose(1, 2)
+        # print(s.shape)
         # use cache_source to avoid glitch
-        if cache_source.shape[2] != 0:
+        if cache_source.shape[2] != 0 and cache_source.shape[2] < s.shape[2]:
             s[:, :, :cache_source.shape[2]] = cache_source
         generated_speech = self.decode(x=speech_feat, s=s)
         return generated_speech, s

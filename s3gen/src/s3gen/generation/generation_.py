@@ -19,7 +19,6 @@ from torch import Tensor
 
 from .const import S3GEN_SR
 from .flow import CausalMaskedDiffWithXvec
-from .xvector import CAMPPlus
 from .f0_predictor import ConvRNNF0Predictor
 from .hifigan import HiFTGenerator
 from .transformer.upsample_encoder import UpsampleConformerEncoder
@@ -69,12 +68,12 @@ class S3Token2Wav(nn.Module) :
 
         # * silence out a few ms and fade audio in to reduce artifacts
 
-        n_trim = S3GEN_SR // 50  # * 20ms = half of a frame
-        trim_fade = torch.zeros(2 * n_trim)
+        # n_trim = S3GEN_SR // 50  # * 20ms = half of a frame
+        # trim_fade = torch.zeros(2 * n_trim)
 
-        trim_fade[n_trim:] = (torch.cos(torch.linspace(torch.pi , 0 , n_trim)) + 1) / 2
+        # trim_fade[n_trim:] = (torch.cos(torch.linspace(torch.pi , 0 , n_trim)) + 1) / 2
 
-        self.register_buffer("trim_fade", trim_fade, persistent=False) # * (buffers get automatic device casting)
+        # self.register_buffer("trim_fade", trim_fade, persistent=False) # * (buffers get automatic device casting)
 
     @torch.inference_mode()
     def inference(
@@ -83,7 +82,7 @@ class S3Token2Wav(nn.Module) :
         ref_dict : dict , 
         cache_source : Tensor | None = None , 
         finalize : bool = True
-    ) -> tuple : 
+    ) -> tuple[Tensor , Tensor] : 
 
         assert speech_tokens.shape[0] == 1, "only batch size of one allowed for now"
 
@@ -105,6 +104,6 @@ class S3Token2Wav(nn.Module) :
         )
 
         # * NOTE: ad-hoc method to reduce "spillover" from the reference clip.
-        output_wavs[:, :len(self.trim_fade)] *= self.trim_fade
+        # output_wavs[:, :len(self.trim_fade)] *= self.trim_fade
 
-        return output_wavs, output_sources
+        return output_wavs , output_sources
