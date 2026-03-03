@@ -1,4 +1,5 @@
 import torch
+import librosa 
 
 import torch.nn as nn
 import torchaudio.functional as F
@@ -8,94 +9,139 @@ from torch import Tensor
 class MEL_SPEC(nn.Module) : 
 
     n_fft : Tensor
-    num_mels : Tensor
-    sample_rate : Tensor
     hop_size : Tensor
-    win_size : Tensor
-    fmin : Tensor
-    fmax : Tensor
-    center : Tensor
-    C : Tensor
-    clip_val : Tensor
     mel_basis : Tensor
     hann_window : Tensor
+    clip_value : Tensor
 
-    def __init__(self , config : dict) -> None : 
+    addition_amount : float
+    division_amount : float
+
+    def __init__(
+        self , 
+        config : dict , 
+        mel_basis : Tensor | None = None , 
+        hann_window : Tensor | None = None
+    ) -> None : 
 
         super().__init__()
 
-        # * Creating values and scaling them to tensors for easy device management. These will be registered as buffers so they move with the model.
-        self.register_buffer('n_fft' , torch.tensor(config['n-fft'] , dtype = torch.long))
-        self.register_buffer('num_mels' , torch.tensor(config['num-mels'] , dtype = torch.long))
-        self.register_buffer('sample_rate' , torch.tensor(config['sample-rate'] , dtype = torch.long))
-        self.register_buffer('hop_size' , torch.tensor(config['hop-size'] , dtype = torch.long))
-        self.register_buffer('win_size' , torch.tensor(config['win-size'] , dtype = torch.long))
-        self.register_buffer('fmin' , torch.tensor(config['f-min'] , dtype = torch.float))
-        self.register_buffer('fmax' , torch.tensor(config['f-max'] , dtype = torch.float))
-        self.register_buffer('center' , torch.tensor(config['center'] , dtype = torch.bool))
-        self.register_buffer('C' , torch.tensor(config.get('c' , 1) , dtype = torch.float))
-        self.register_buffer('clip_val' , torch.tensor(config.get('clip-val' , 1e-5), dtype = torch.float))
-        
+
+        self.n_fft_val : int = config['n-fft']
+        self.hop_size_val : int = config['hop-size']
+        self.win_size : int | None = config.get('win-length')
+        self.center : bool = config.get('center' , True)
         self.pad_mode : str = config.get('pad-mode' , 'reflect')
+        self.clip_value_val : float = config.get('clip-val' , 1e-5)
+        self.C : float = config.get('c' , 1.0)
+        self.normalized : bool = config.get('normalized' , False)
+        self.onsided : float | None = config.get('onesided' , None)
+        self.spec_calc : str = config.get('spec-calc' , 'power')
+        self.log : str = config.get('log' , 'log10')
+        self.drop_last_spec : bool = config.get('drop-last-spec' , False)
 
-        # * Pre-calculate Mel Filterbank
-        mel_fb = F.melscale_fbanks(
-            n_freqs = (self.n_fft.item() // 2) + 1 , 
-            f_min = self.fmin.item() , 
-            f_max = self.fmax.item() , 
-            n_mels = self.num_mels.item() , 
-            sample_rate = self.sample_rate.item() , 
-            norm = 'slaney' , 
-            mel_scale = 'htk'
-        ).transpose(0, 1) 
+        self.addition_amount : float = config.get('addition-amount' , 0.0)
+        self.division_amount : float = config.get('division-amount' , 1.0)
 
-        # * Pre-calculate hann Window
-        window = torch.hann_window(self.win_size.item())
+        # * Creating values and scaling them to tensors for easy device management. These will be registered as buffers so they move with the model.
+        self.register_buffer('n_fft' , torch.tensor(self.n_fft_val , dtype = torch.long))
+        self.register_buffer('hop_size' , torch.tensor(self.hop_size_val , dtype = torch.long))
+        self.register_buffer('clip_value' , torch.tensor(self.clip_value_val , dtype = torch.float))
 
-        self.register_buffer('mel_basis' , mel_fb)
+        # * Check if mel basis is provided, if not calculate it from config parameters.
+        if mel_basis is None : 
+
+            if 'n-mels' not in config : 
+                raise ValueError("Missing 'n-mels' in config for MEL_SPEC initialization.")
+            if 'sample-rate' not in config : 
+                raise ValueError("Missing 'sample-rate' in config for MEL_SPEC initialization.")
+
+            # # * Calculate Mel Filterbank
+            # mel_basis = F.melscale_fbanks(
+            #     n_freqs = (self.n_fft_val // 2) + 1 , 
+            #     f_min =  , 
+            #     f_max =  , 
+            #     n_mels = config['n-mels'] , 
+            #     sample_rate =  , 
+            #     norm = config.get('norm' , 'slaney') ,
+            #     mel_scale = config.get('mel-scale' , 'htk')
+            # ).transpose(0 , 1) 
+
+            mel_basis_np = librosa.filters.mel(
+                sr=config['sample-rate'], 
+                n_fft=self.n_fft_val, 
+                n_mels=config['n-mels'], 
+                fmin=config.get('f-min' , 0.0), 
+                fmax=config.get('f-max' , config['sample-rate'] // 2), 
+                # htk=True, 
+                # norm='slaney'
+            )
+
+            mel_basis = torch.from_numpy(mel_basis_np).float()
+
+        if hann_window is None : 
+
+            if self.win_size is None : 
+                raise ValueError("win-length must be specified in config if hann_window is not provided.")
+
+            window = torch.hann_window(self.win_size)
+
         self.register_buffer('hann_window' , window)
+        self.register_buffer('mel_basis' , mel_basis)
 
     def forward(self , audio : Tensor) -> Tensor : 
 
-        # * Range Validation
-        if torch.max(torch.abs(audio)) > 1.0 : 
-            print("Audio magnitude exceeds 1.0. Results may differ from training.") # ! Change with logger
+        if not self.center and self.pad_mode == 'reflect' : 
 
-        # * Manual Padding (Center=False logic)
-        pad_size = (self.n_fft.item() - self.hop_size.item()) // 2
+            pad_amount = int((self.n_fft_val - self.hop_size_val) / 2)
 
-        audio = torch.nn.functional.pad(
-            audio.unsqueeze(1) , 
-            (pad_size , pad_size) ,  
-            mode = self.pad_mode
-        ).squeeze(1)
+            audio = torch.nn.functional.pad(
+                audio.unsqueeze(1) , 
+                (pad_amount , pad_amount) ,  
+                mode = 'reflect'
+            ).squeeze(1)
 
         # * STFT
         spec = torch.stft(
             audio , 
-            n_fft = self.n_fft.item() , 
-            hop_length = self.hop_size.item() , 
-            win_length = self.win_size.item() , 
+            n_fft = self.n_fft_val , 
+            hop_length = self.hop_size_val , 
+            win_length = self.win_size , 
             window = self.hann_window , 
-            center = self.center.item() , 
+            center = self.center , 
             pad_mode = self.pad_mode , 
-            normalized = False , 
-            onesided = True , 
+            normalized = self.normalized , 
+            onesided = None , 
             return_complex = True
         )
 
-        # * Magnitude Calculation
-        magnitudes = torch.sqrt(spec.real.pow(2) + spec.imag.pow(2) + 1e-9)
+        if self.drop_last_spec : 
+            spec = spec[... , : -1]
+
+        if self.spec_calc == 'power' : 
+            spec = torch.abs(spec)**2
+
+        elif self.spec_calc == 'mod' : 
+
+            spec = torch.view_as_real(spec) 
+            spec = torch.sqrt(spec.pow(2).sum(-1) + (1e-9)) 
 
         # * Mel Projection
-        mel_output = self.mel_basis @ magnitudes
+        mel_output : Tensor = self.mel_basis @ spec
 
-        # * Log Compression
-        output : Tensor = torch.log(
-            torch.clamp(
-                mel_output , 
-                min = self.clip_val.item()
-            ) * self.C.item()
+        clamped_output = torch.clamp(
+            mel_output , 
+            min = self.clip_value
         )
+
+        if self.log == 'log10' : 
+
+            clamped_output = clamped_output.log10() * self.C
+            clamped_output = torch.maximum(clamped_output , clamped_output.max() - 8.0)
+
+        elif self.log == 'natural' : 
+            clamped_output = clamped_output.log() * self.C
+
+        output = (clamped_output + self.addition_amount) / self.division_amount
 
         return output

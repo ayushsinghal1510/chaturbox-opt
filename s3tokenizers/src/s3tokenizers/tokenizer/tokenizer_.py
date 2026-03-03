@@ -1,65 +1,45 @@
 import torch
-import librosa
+
+import torch.nn as nn
 
 from accelerate import Accelerator
 
 from torch import Tensor , LongTensor
-
-from s3tokenizer.utils import padding
 
 from s3tokenizer.model_v2 import (
     S3TokenizerV2 , 
     ModelConfig , 
 )
 
+from modules import MEL_SPEC
+# from modules.src.modules import MEL_SPEC
+
 from .services_ import SERVICES
 
-class S3Tokenizer(S3TokenizerV2 , SERVICES) : 
-
-    _mel_filters : Tensor 
-    window : Tensor 
-
-    '''
-    s3tokenizer.S3TokenizerV2 with the following changes:
-    - a more integrated `forward`
-    - compute `log_mel_spectrogram` using `_mel_filters` and `window` in `register_buffers`
-    '''
-
-    ignore_state_dict_missing = ("_mel_filters", "window")
+class S3Tokenizer(S3TokenizerV2 , SERVICES , nn.Module) : 
 
     def __init__(
         self , 
         config : dict , 
-        model_config : ModelConfig = ModelConfig()
+        mel_spec : MEL_SPEC , 
+        model_config : ModelConfig = ModelConfig() , 
+        accelerator : Accelerator | None = None , 
     ) : 
 
-        super().__init__(config['model-name'])
+        nn.Module.__init__(self)
+        S3TokenizerV2.__init__(self , name = config['model-name'])
 
         self.config : dict = config
 
         self.n_fft = self.config['n_fft']
+        self.mel_spec_fn : MEL_SPEC = mel_spec
 
-        _mel_filters = librosa.filters.mel(
-            sr = self.config['sample-rate'] , 
-            n_fft = self.n_fft , 
-            n_mels = model_config.n_mels
-        )
-
-        self.register_buffer(
-            '_mel_filters' , 
-            torch.FloatTensor(_mel_filters)
-        )
-
-        self.register_buffer(
-            'window' , 
-            torch.hann_window(self.n_fft)
-        )
-
-    @torch.no_grad()
+    # ! Add batch processing here
+    @torch.inference_mode()
     def forward(
         self , 
-        wav : Tensor , # * [audio]
-        accelerator : Accelerator | None = None , 
+        wav : Tensor , # * [channel , audio]
+
         max_len : int | None = None
     ) -> tuple[Tensor , LongTensor | Tensor] : 
 
@@ -67,25 +47,11 @@ class S3Tokenizer(S3TokenizerV2 , SERVICES) :
 
         wav = wav.to(self.device)
 
-        mel = self.log_mel_spectrogram(
-            audio = wav , 
-            device = self.device , 
-            n_fft = self.n_fft , 
-            window = self.window , 
-            _mel_filters = self._mel_filters , 
-            hop_length = self.config['hop_length'] , 
-            padding = self.config['padding']
-        ).to(self.device)  # [B=1, F, T]
+        mel = self.mel_spec_fn(wav)
 
         mel_len = torch.tensor([mel.shape[-1]] , device = self.device)
 
-        if accelerator is None : 
-            tokenizer = self
-
-        else : 
-            tokenizer = accelerator.unwrap_model(self)
-
-        speech_tokens , speech_token_lens = tokenizer.quantize(
+        speech_tokens , speech_token_lens = self.quantize(
             mel , 
             mel_len
         )
