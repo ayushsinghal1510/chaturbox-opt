@@ -29,4 +29,7 @@ build-backend = "uv_build"
 [tool.uv.workspace]
 members = [
     "vc",
+    "models/s3m",
+    "tokenizers/s3t",
+    "services",
 ]
