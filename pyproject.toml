@@ -15,6 +15,7 @@ dependencies = [
     "s3tokenizer>=0.3.0",
     "safetensors>=0.7.0",
     "torch>=2.10.0",
+    "torchcodec>=0.10.0",
     "transformers>=5.2.0",
 ]
 
@@ -24,3 +25,8 @@ chaturbox-opt = "chaturbox_opt.app_:main"
 [build-system]
 requires = ["uv_build>=0.8.17,<0.9.0"]
 build-backend = "uv_build"
+
+[tool.uv.workspace]
+members = [
+    "vc",
+]
