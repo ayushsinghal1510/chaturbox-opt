@@ -7,3 +7,5 @@ __pycache__/
 
 *.wav
 *.png
+*.mp3
+*.safetensors

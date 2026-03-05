@@ -28,7 +28,7 @@ class S3Tokenizer(S3TokenizerV2) :
         accelerator : Accelerator | None = None , 
     ) : 
 
-        super().__init__(name=config['model-name'])
+        super().__init__(name = config['model-name'])
 
         self.config : dict = config
 

@@ -1,0 +1,42 @@
+tokenizer-mel-spec : 
+  tms : &tms 
+    sample-rate : 16000
+    n-fft : 400
+    n-mels : 128
+    win-size : 400
+    hop-size : 160
+    win-length : 400
+    center : True
+    normalized : False
+    spec-calc : power
+    drop-last-spec : True 
+    log : log10
+    clip-val : 0.0000000001
+    addition-amount : 4
+    division-amount : 4
+
+tokenizer : 
+  s3t : &s3t
+    model-name : speech_tokenizer_v2_25hz
+    state-dict-file : assets/tokenizers/s3/tokenizer.pt
+
+
+generation : 
+  voices : 
+    _1 : assets/voices/conds.pt
+
+  tokenizer-mel-spec : 
+    << : *tms
+
+  tokenizer : 
+    << : *s3t
+
+  generation : 
+    state-dict-file : assets/models/s3/model.safetensors
+
+  case : 
+    content-audio-path : assets/test/cases/1/inputs/file.mp3
+    content-audio-sr : 16000
+
+    output-audio-path : assets/test/cases/1/outputs/file.wav
+    output-audio-sr : 24000
