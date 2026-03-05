@@ -3,7 +3,8 @@ import librosa
 import torchaudio
 
 from .chatterbox.vc import ChatterboxVC
-from .chatterbox.models.s3gen import S3Gen
+
+from .chatterbox.models.s3gen.generation_ import S3Token2Wav
 from safetensors.torch import load_file
 
 from s3t import S3Tokenizer
@@ -50,7 +51,10 @@ def generate_tts_audio() -> None :
         mel_spec = tokenizer_mel_spec_fn ,
     )
 
-    s3gen = S3Gen()
+    s3gen : S3Token2Wav = S3Token2Wav(
+        device = device , 
+        config = {}
+    )
     s3gen.load_state_dict(
         load_file('/teamspace/studios/this_studio/models/s3gen.safetensors') , 
         strict = False
