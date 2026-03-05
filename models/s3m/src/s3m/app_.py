@@ -57,12 +57,15 @@ def generate_tts_audio() -> None :
     )
     s3gen.to(device).eval()
 
-    working_sd = s3gen.tokenizer.state_dict()
+    # * Load the tokenizer with the saved the state dict 
 
-    tokenizer.load_state_dict(working_sd, strict=False)
-    torch.save(tokenizer.state_dict(), "s3_tokenizer_modular_fixed.pt")
+    tokenizer.load_state_dict(
+        torch.load(
+            'assets/tokenizers/s3/tokenizer.pt' , 
+            map_location = 'cpu'
+        )
+    )
 
-    compare_tokenizers(s3gen.tokenizer , tokenizer)
 
     with torch.inference_mode():
         audio_16, _ = librosa.load('/teamspace/studios/this_studio/ElevenLabs_2025-06-05T07_18_58_Rachel_pre_sp100_s50_sb75_se0_b_m2.mp3', sr=16_000)
@@ -88,53 +91,6 @@ def generate_tts_audio() -> None :
         wav = wav.squeeze(0).detach().cpu()
 
     torchaudio.save("output.wav", wav, sample_rate=vc_mode.sr)
-
-import torch
-
-def compare_tokenizers(tokenizer_original, tokenizer_modular):
-    """
-    Compares the weights of two tokenizer instances to ensure 
-    the modular version loaded pretrained weights correctly.
-    """
-    print("--- Starting Weight Comparison ---")
-    
-    orig_sd = tokenizer_original.state_dict()
-    mod_sd = tokenizer_modular.state_dict()
-
-    # 1. Check if they have the same number of parameter entries
-    if len(orig_sd) != len(mod_sd):
-        print(f"CRITICAL: Key count mismatch! Original: {len(orig_sd)}, Modular: {len(mod_sd)}")
-    
-    mismatched_keys = []
-    missing_keys = []
-    
-    for key in orig_sd.keys():
-        if key not in mod_sd:
-            missing_keys.append(key)
-            continue
-            
-        # 2. Check if the actual weights are identical
-        if not torch.equal(orig_sd[key], mod_sd[key]):
-            # Check for small epsilon difference if strictly equal fails
-            diff = (orig_sd[key] - mod_sd[key]).abs().max()
-            if diff > 1e-6:
-                mismatched_keys.append((key, diff.item()))
-
-    # Reporting results
-    if not missing_keys and not mismatched_keys:
-        print("SUCCESS: All weights are identical across both models.")
-    else:
-        if missing_keys:
-            print(f"MISSING KEYS in Modular version: {missing_keys}")
-        if mismatched_keys:
-            print("WEIGHT MISMATCH detected in following keys:")
-            for key, diff in mismatched_keys:
-                print(f" - {key} (Max Diff: {diff})")
-    
-    print("--- Comparison Finished ---")
-
-# Usage:
-# compare_tokenizers(script1_tokenizer, script2_tokenizer)
 
 
 def main() : 
